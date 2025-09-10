@@ -8,7 +8,7 @@ import 'firebase/compat/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD7pKIOv1Nkf70N1fnSBG2yiQeQE62DbgU",
@@ -48,13 +48,33 @@ function App() {
 }
 
 function SignIn() {
-  const signInWithGoogle = () => {
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const signInWithGoogle = async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+    try {
+      await auth.signInWithPopup(provider);
+      setErrorMsg(null);
+    } catch (error) {
+      if (error?.code === 'auth/popup-closed-by-user') {
+        setErrorMsg('Cerraste la ventana de inicio de sesión antes de completar el proceso.');
+      } else if (error?.code === 'auth/cancelled-popup-request') {
+        setErrorMsg('Se canceló una ventana de inicio de sesión anterior. Inténtalo de nuevo.');
+      } else if (error?.code === 'auth/popup-blocked') {
+        setErrorMsg('El navegador bloqueó la ventana emergente. Permite los pop-ups e inténtalo de nuevo.');
+      } else {
+        setErrorMsg(error?.message || 'Error al iniciar sesión. Inténtalo nuevamente.');
+      }
+    }
   }
 
   return (
-    <button onClick = {signInWithGoogle}>Sign in with Google</button>
+    <>
+      <button onClick={signInWithGoogle}>Sign in with Google</button>
+      {errorMsg && (
+        <p style={{ color: 'red', marginTop: 8 }}>{errorMsg}</p>
+      )}
+    </>
   )
 }
 
@@ -65,6 +85,8 @@ function SignOut() {
 }
 
 function ChatRoom() {
+  const dummy = useRef();
+
   const messagesRef = firestore.collection('messages');
   const query = messagesRef.orderBy('createdAt').limit(25);
 
@@ -85,13 +107,17 @@ function ChatRoom() {
     })
 
     setFormValue('');
+
+    dummy.current.scrollIntoView({ behavior: 'smooth' });
   }
 
   return (
     <>
-      <div>
+      <main>
         {messages && messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
-      </div>
+      
+        <div ref = {dummy}></div>
+      </main>
 
       <form onSubmit = {sendMessage}>
         <input value = {formValue} onChange = {(e) => setFormValue(e.target.value)}/>
@@ -103,11 +129,15 @@ function ChatRoom() {
 }
 
 function ChatMessage(props) {
-  const { text, uid } = props.message;
+  const { text, uid, photoURL } = props.message;
   const messageClass = auth.currentUser && uid === auth.currentUser.uid ? 'sent' : 'received';
+
+  // Fallback avatar in case some older messages don't have photoURL
+  const avatar = photoURL || '/logo192.png';
 
   return (
     <div className={`message ${messageClass}`}>
+      <img src={avatar} alt="avatar" referrerPolicy="no-referrer" />
       <p>{text}</p>
     </div>
   )
