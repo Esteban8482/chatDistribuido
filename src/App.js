@@ -11,7 +11,6 @@ import { useCollectionData } from 'react-firebase-hooks/firestore';
 import { useState, useRef } from 'react';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD7pKIOv1Nkf70N1fnSBG2yiQeQE62DbgU",
   authDomain: "chatdistribuido-2ccd0.firebaseapp.com",
   projectId: "chatdistribuido-2ccd0",
   storageBucket: "chatdistribuido-2ccd0.firebasestorage.app",
